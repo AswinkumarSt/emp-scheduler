@@ -1,21 +1,27 @@
-import 'package:employee_scheduler/core/theme/theme.dart';
+import 'package:employee_scheduler/core/services/supabase_service.dart';
 import 'package:employee_scheduler/features/auth/presentation/pages/onboarding_page.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Supabase
+  await SupabaseService().initialize();
+  
+  runApp(const MyApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return  MaterialApp(
-      debugShowCheckedModeBanner: false ,
-      title: 'E.S',
-      theme: AppTheme.darkThemeMode,
+    return MaterialApp(
+      title: 'Team Scheduler',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
       home: const OnboardingPage(),
-      );
+    );
   }
 }
