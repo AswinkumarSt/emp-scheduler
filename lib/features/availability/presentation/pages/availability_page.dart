@@ -1,6 +1,7 @@
   import 'package:employee_scheduler/features/availability/domain/repository/availability_cubit.dart';
 import 'package:employee_scheduler/features/availability/presentation/widgets/add_slot_bottom_sheet.dart';
 import 'package:employee_scheduler/features/availability/presentation/widgets/availability_slot_item.dart';
+import 'package:employee_scheduler/features/task/presentation/pages/create_task_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -40,9 +41,25 @@ import 'package:flutter_bloc/flutter_bloc.dart';
         create: (context) => AvailabilityCubit()..loadUserAvailability(widget.userId),
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('My Availability'),
-            // Removed the action button from AppBar
-          ),
+  title: const Text('My Availability'),
+  actions: [
+    // In AvailabilityPage - update the navigation button
+IconButton(
+  icon: const Icon(Icons.add_task),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateTaskPage(
+          currentUserId: widget.userId,
+        ),
+      ),
+    );
+  },
+  tooltip: 'Create Task',
+),
+  ],
+),
           body: BlocConsumer<AvailabilityCubit, AvailabilityState>(
             listener: (context, state) {
               if (state is AvailabilityError) {

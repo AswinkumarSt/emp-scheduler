@@ -71,6 +71,7 @@ class SupabaseService {
           .eq('name', name)
           .single();
 
+      // ignore: unnecessary_null_comparison
       return response != null;
     } catch (e) {
       return false;
