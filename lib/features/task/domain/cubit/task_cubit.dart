@@ -120,7 +120,7 @@ class TaskCubit extends Cubit<TaskState> {
   Future<void> loadTasks(String userId) async {
     emit(TaskLoading());
     try {
-      _tasks = await taskRepository.getTasksForUser(userId);
+       _tasks = await taskRepository.getTasksForUserAlternative(userId); 
       emit(TasksLoaded([..._tasks]));
     } catch (e) {
       emit(TaskError('Failed to load tasks: $e'));

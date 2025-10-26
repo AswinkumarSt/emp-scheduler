@@ -22,7 +22,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Provide TaskCubit globally
         BlocProvider(
           create: (context) => TaskCubit(
             taskRepository: TaskRepository(
@@ -30,7 +29,6 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
-        // Add other cubits/blocs here as needed
       ],
       child: MaterialApp(
         title: 'Team Scheduler',

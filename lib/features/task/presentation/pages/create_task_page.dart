@@ -41,7 +41,9 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   void _createTask(BuildContext context) {
     if (_formKey.currentState!.validate()) {
       final taskCubit = context.read<TaskCubit>();
-      final collaboratorIds = taskCubit.selectedCollaborators.map((u) => u.id).toList();
+      final collaboratorIds = taskCubit.selectedCollaborators
+          .map((u) => u.id)
+          .toList();
       final selectedSlot = taskCubit.selectedSlot;
 
       final task = Task(
@@ -52,19 +54,21 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
         collaboratorIds: collaboratorIds,
         duration: taskCubit.selectedDuration,
         startTime: selectedSlot?.startTime,
-        endTime: selectedSlot?.endTime, 
+        endTime: selectedSlot?.endTime,
         id: null,
       );
 
       taskCubit.createTask(task);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Task "${_titleController.text}" created successfully!'),
+          content: Text(
+            'Task "${_titleController.text}" created successfully!',
+          ),
           backgroundColor: Colors.green,
         ),
       );
-      
+
       Navigator.pop(context);
     }
   }
@@ -91,16 +95,16 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
 
   // Simplified validation without context dependency
   bool get _canProceedFromStep1 => _titleController.text.isNotEmpty;
-  
+
   bool _canProceedFromStep2(BuildContext context) {
     final taskCubit = context.read<TaskCubit>();
     return taskCubit.selectedCollaborators.isNotEmpty;
   }
-  
+
   bool _canProceedFromStep3(BuildContext context) {
     return true; // Duration always has a default value
   }
-  
+
   bool _canProceedFromStep4(BuildContext context) {
     final taskCubit = context.read<TaskCubit>();
     return taskCubit.selectedSlot != null;
@@ -190,9 +194,13 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: _canProceedToNextStep(context)
-                                ? (_currentStep < 3 ? _nextStep : () => _createTask(context))
+                                ? (_currentStep < 3
+                                      ? _nextStep
+                                      : () => _createTask(context))
                                 : null,
-                            child: Text(_currentStep < 3 ? 'Next' : 'Create Task'),
+                            child: Text(
+                              _currentStep < 3 ? 'Next' : 'Create Task',
+                            ),
                           ),
                         ),
                       ],
@@ -249,31 +257,32 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
 
   Widget _buildStepValidationInfo(BuildContext context) {
     final taskCubit = context.read<TaskCubit>();
-    
+
     String message = '';
     Color color = Colors.grey;
 
     switch (_currentStep) {
       case 0:
-        message = _titleController.text.isEmpty 
-            ? 'Enter task title to continue' 
+        message = _titleController.text.isEmpty
+            ? 'Enter task title to continue'
             : 'Ready to continue';
         color = _titleController.text.isNotEmpty ? Colors.green : Colors.orange;
         break;
       case 1:
         final count = taskCubit.selectedCollaborators.length;
-        message = count == 0 
+        message = count == 0
             ? 'Select at least one collaborator'
             : '$count collaborator${count > 1 ? 's' : ''} selected - Ready to continue';
         color = count > 0 ? Colors.green : Colors.orange;
         break;
       case 2:
-        message = '${taskCubit.selectedDuration} minutes selected - Ready to continue';
+        message =
+            '${taskCubit.selectedDuration} minutes selected - Ready to continue';
         color = Colors.green;
         break;
       case 3:
         final hasSelectedSlot = taskCubit.selectedSlot != null;
-        message = hasSelectedSlot 
+        message = hasSelectedSlot
             ? 'Time slot selected - Ready to create task'
             : 'Select a time slot to continue';
         color = hasSelectedSlot ? Colors.green : Colors.orange;
@@ -282,11 +291,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
 
     return Text(
       message,
-      style: TextStyle(
-        color: color,
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-      ),
+      style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
       textAlign: TextAlign.center,
     );
   }
@@ -297,12 +302,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       children: [
         Text(
           'Step 1: Task Details',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 24),
-        
+
         // Task Title
         TextFormField(
           controller: _titleController,
@@ -323,7 +328,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
           },
         ),
         const SizedBox(height: 16),
-        
+
         // Task Description
         TextFormField(
           controller: _descriptionController,
@@ -357,7 +362,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   Widget _buildStep4(BuildContext context) {
     return BlocBuilder<TaskCubit, TaskState>(
       builder: (context, state) {
-        return const SlotSelectionWidget();
+        return SlotSelectionWidget(
+          onSlotSelected: () {
+            // Force rebuild to update button state when slot is selected
+            setState(() {});
+          },
+        );
       },
     );
   }

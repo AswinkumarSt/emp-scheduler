@@ -1,7 +1,7 @@
 // lib/features/task/domain/repository/task_repository.dart
 import 'package:employee_scheduler/features/task/domain/models/task_model.dart';
-import 'package:employee_scheduler/features/task/domain/models/user_model.dart' as user_model; // Add prefix
-import 'package:supabase_flutter/supabase_flutter.dart' hide User; // Hide Supabase User
+import 'package:employee_scheduler/features/task/domain/models/user_model.dart' as user_model;
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 class TaskRepository {
   final SupabaseClient supabase;
@@ -50,7 +50,6 @@ class TaskRepository {
     }
   }
 
-  // Use the prefixed User class
   Future<List<user_model.User>> getUsers() async {
     try {
       print('🔄 Starting getUsers()...');
@@ -88,7 +87,7 @@ class TaskRepository {
           print('Processing user $i: $item');
           
           if (item is Map<String, dynamic>) {
-            final user = user_model.User.fromJson(item); // Use prefixed User
+            final user = user_model.User.fromJson(item);
             users.add(user);
             print('✅ Added user: ${user.name}');
           } else {
@@ -146,14 +145,14 @@ class TaskRepository {
     try {
       print('Fetching tasks for user: $userId');
       
-      // Get tasks where user is creator OR collaborator
+      // FIXED: Use proper Supabase query syntax
       final response = await supabase
           .from('tasks')
           .select('''
             *,
-            task_collaborators!inner(*)
+            task_collaborators(*)
           ''')
-          .or('created_by.eq.$userId,task_collaborators.user_id.eq.$userId')
+          .or('created_by.eq.$userId,and(task_collaborators.user_id.eq.$userId)')
           .order('created_at', ascending: false);
 
       if (response == null) {
@@ -173,7 +172,7 @@ class TaskRepository {
             .toList();
 
         return Task(
-          id: taskMap['id'] as int? ?? 0, // Handle null case
+          id: taskMap['id'] as int? ?? 0,
           title: taskMap['title'] as String,
           description: taskMap['description'] as String? ?? '',
           createdBy: taskMap['created_by'] as String,
@@ -198,11 +197,93 @@ class TaskRepository {
     }
   }
 
-  // Additional useful methods:
+  // Alternative method if the above still has issues
+  Future<List<Task>> getTasksForUserAlternative(String userId) async {
+    try {
+      print('Fetching tasks for user: $userId (alternative method)');
+      
+      // Get tasks where user is creator
+      final createdTasksResponse = await supabase
+          .from('tasks')
+          .select('''
+            *,
+            task_collaborators(*)
+          ''')
+          .eq('created_by', userId)
+          .order('created_at', ascending: false);
+
+      // Get tasks where user is collaborator
+      final collaboratorTasksResponse = await supabase
+          .from('tasks')
+          .select('''
+            *,
+            task_collaborators!inner(*)
+          ''')
+          .eq('task_collaborators.user_id', userId)
+          .order('created_at', ascending: false);
+
+      final createdTasks = createdTasksResponse as List<dynamic>? ?? [];
+      final collaboratorTasks = collaboratorTasksResponse as List<dynamic>? ?? [];
+      
+      // Combine and remove duplicates
+      final allTasksData = [...createdTasks, ...collaboratorTasks];
+      final uniqueTasks = _removeDuplicateTasks(allTasksData);
+      
+      print('Found ${uniqueTasks.length} tasks for user $userId');
+
+      return uniqueTasks.map((taskJson) {
+        final Map<String, dynamic> taskMap = taskJson as Map<String, dynamic>;
+        
+        final collaboratorsData = taskMap['task_collaborators'] as List<dynamic>? ?? [];
+        final collaborators = collaboratorsData
+            .map((collab) => (collab as Map<String, dynamic>)['user_id'] as String)
+            .toList();
+
+        return Task(
+          id: taskMap['id'] as int? ?? 0,
+          title: taskMap['title'] as String,
+          description: taskMap['description'] as String? ?? '',
+          createdBy: taskMap['created_by'] as String,
+          startTime: taskMap['start_time'] != null 
+              ? DateTime.parse(taskMap['start_time'] as String)
+              : null,
+          endTime: taskMap['end_time'] != null
+              ? DateTime.parse(taskMap['end_time'] as String)
+              : null,
+          createdAt: DateTime.parse(taskMap['created_at'] as String),
+          collaboratorIds: collaborators,
+          duration: taskMap['start_time'] != null && taskMap['end_time'] != null
+              ? DateTime.parse(taskMap['end_time'] as String)
+                  .difference(DateTime.parse(taskMap['start_time'] as String))
+                  .inMinutes
+              : null,
+        );
+      }).toList();
+    } catch (e) {
+      print('Error fetching tasks (alternative): $e');
+      rethrow;
+    }
+  }
+
+  List<dynamic> _removeDuplicateTasks(List<dynamic> tasks) {
+    final seenIds = <int>{};
+    final uniqueTasks = <dynamic>[];
+    
+    for (final task in tasks) {
+      final taskMap = task as Map<String, dynamic>;
+      final taskId = taskMap['id'] as int;
+      
+      if (!seenIds.contains(taskId)) {
+        seenIds.add(taskId);
+        uniqueTasks.add(task);
+      }
+    }
+    
+    return uniqueTasks;
+  }
 
   Future<void> updateTask(Task task) async {
     try {
-      // Check if task has an ID
       if (task.id == null) {
         throw Exception('Cannot update task without ID');
       }
@@ -215,9 +296,8 @@ class TaskRepository {
             'start_time': task.startTime?.toIso8601String(),
             'end_time': task.endTime?.toIso8601String(),
           })
-          .eq('id', task.id!); // Use ! since we checked for null
+          .eq('id', task.id!);
 
-      // Update collaborators
       await supabase
           .from('task_collaborators')
           .delete()
@@ -243,13 +323,11 @@ class TaskRepository {
 
   Future<void> deleteTask(int taskId) async {
     try {
-      // Delete collaborators first (due to foreign key constraints)
       await supabase
           .from('task_collaborators')
           .delete()
           .eq('task_id', taskId);
 
-      // Then delete the task
       await supabase
           .from('tasks')
           .delete()
@@ -262,7 +340,6 @@ class TaskRepository {
     }
   }
 
-  // Use prefixed User class here too
   Future<user_model.User?> getUserById(String userId) async {
     try {
       final response = await supabase

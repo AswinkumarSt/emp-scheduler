@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SlotSelectionWidget extends StatefulWidget {
-  const SlotSelectionWidget({super.key});
+  final VoidCallback? onSlotSelected;
+  
+  const SlotSelectionWidget({super.key, this.onSlotSelected});
 
   @override
   State<SlotSelectionWidget> createState() => _SlotSelectionWidgetState();
@@ -254,6 +256,11 @@ class _SlotSelectionWidgetState extends State<SlotSelectionWidget> {
                         _selectedSlot = slot;
                       });
                       taskCubit.selectSlot(slot);
+                      
+                      // Notify parent page to update validation
+                      if (widget.onSlotSelected != null) {
+                        widget.onSlotSelected!();
+                      }
                     },
                   ),
                 );

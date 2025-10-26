@@ -2,11 +2,9 @@
 import 'package:employee_scheduler/features/availability/presentation/pages/availability_page.dart';
 import 'package:employee_scheduler/features/task/domain/cubit/task_cubit.dart';
 import 'package:employee_scheduler/features/task/domain/models/task_model.dart';
-import 'package:employee_scheduler/features/task/domain/repository/task_repository.dart';
 import 'package:employee_scheduler/features/task/presentation/pages/create_task_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TaskListPage extends StatefulWidget {
   final String userId;
@@ -22,7 +20,6 @@ class _TaskListPageState extends State<TaskListPage> {
 
   @override
   void initState() {
-    
     super.initState();
     // Load tasks when page starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -47,179 +44,174 @@ class _TaskListPageState extends State<TaskListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => TaskCubit(
-        taskRepository: TaskRepository(supabase: Supabase.instance.client),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Tasks'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AvailabilityPage(userId: widget.userId),
+                ),
+              );
+            },
+            tooltip: 'Manage Availability',
+          ),
+        ],
       ),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Task List'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.calendar_today),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AvailabilityPage(userId: widget.userId),
-                  ),
-                );
-              },
-              tooltip: 'Manage Availability',
-            ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              // Filter Chips
-              Row(
-                children: [
-                  FilterChip(
-                    label: const Text('All'),
-                    selected: _currentFilter == 'All',
-                    onSelected: (selected) {
-                      setState(() {
-                        _currentFilter = 'All';
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  FilterChip(
-                    label: const Text('Created'),
-                    selected: _currentFilter == 'Created',
-                    onSelected: (selected) {
-                      setState(() {
-                        _currentFilter = 'Created';
-                      });
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  FilterChip(
-                    label: const Text('Mine'),
-                    selected: _currentFilter == 'Mine',
-                    onSelected: (selected) {
-                      setState(() {
-                        _currentFilter = 'Mine';
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Tasks List
-              Expanded(
-                child: BlocConsumer<TaskCubit, TaskState>(
-                  listener: (context, state) {
-                    if (state is TaskCreated) {
-                      // Reload tasks when a new task is created
-                      context.read<TaskCubit>().loadTasks(widget.userId);
-                    }
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Filter Chips
+            Row(
+              children: [
+                FilterChip(
+                  label: const Text('All'),
+                  selected: _currentFilter == 'All',
+                  onSelected: (selected) {
+                    setState(() {
+                      _currentFilter = 'All';
+                    });
                   },
-                  builder: (context, state) {
-                    if (state is TaskLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Created'),
+                  selected: _currentFilter == 'Created',
+                  onSelected: (selected) {
+                    setState(() {
+                      _currentFilter = 'Created';
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Mine'),
+                  selected: _currentFilter == 'Mine',
+                  onSelected: (selected) {
+                    setState(() {
+                      _currentFilter = 'Mine';
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-                    if (state is TaskError) {
+            // Tasks List
+            Expanded(
+              child: BlocConsumer<TaskCubit, TaskState>(
+                listener: (context, state) {
+                  if (state is TaskCreated) {
+                    // Reload tasks when a new task is created
+                    context.read<TaskCubit>().loadTasks(widget.userId);
+                  }
+                },
+                builder: (context, state) {
+                  if (state is TaskLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (state is TaskError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<TaskCubit>().loadTasks(widget.userId);
+                            },
+                            child: const Text('Try Again'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (state is TasksLoaded) {
+                    final filteredTasks = _filterTasks(state.tasks);
+
+                    if (filteredTasks.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.error, size: 64, color: Colors.red),
+                            const Icon(Icons.task, size: 64, color: Colors.grey),
                             const SizedBox(height: 16),
                             Text(
-                              state.message,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.red),
+                              _currentFilter == 'All' 
+                                ? 'No tasks found'
+                                : 'No ${_currentFilter.toLowerCase()} tasks',
+                              style: const TextStyle(fontSize: 18, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Create your first task to get started',
+                              style: TextStyle(color: Colors.grey),
                             ),
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () {
-                                context.read<TaskCubit>().loadTasks(widget.userId);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CreateTaskPage(currentUserId: widget.userId),
+                                  ),
+                                );
                               },
-                              child: const Text('Try Again'),
+                              child: const Text('Create First Task'),
                             ),
                           ],
                         ),
                       );
                     }
 
-                    if (state is TasksLoaded) {
-                      final filteredTasks = _filterTasks(state.tasks);
-
-                      if (filteredTasks.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.task, size: 64, color: Colors.grey),
-                              const SizedBox(height: 16),
-                              Text(
-                                _currentFilter == 'All' 
-                                  ? 'No tasks found'
-                                  : 'No ${_currentFilter.toLowerCase()} tasks',
-                                style: const TextStyle(fontSize: 18, color: Colors.grey),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Create your first task to get started',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => CreateTaskPage(currentUserId: widget.userId),
-                                    ),
-                                  );
-                                },
-                                child: const Text('Create First Task'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return RefreshIndicator(
-                        onRefresh: () async {
-                          context.read<TaskCubit>().loadTasks(widget.userId);
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        context.read<TaskCubit>().loadTasks(widget.userId);
+                      },
+                      child: ListView.builder(
+                        itemCount: filteredTasks.length,
+                        itemBuilder: (context, index) {
+                          final task = filteredTasks[index];
+                          return _buildTaskCard(task, context);
                         },
-                        child: ListView.builder(
-                          itemCount: filteredTasks.length,
-                          itemBuilder: (context, index) {
-                            final task = filteredTasks[index];
-                            return _buildTaskCard(task, context);
-                          },
-                        ),
-                      );
-                    }
+                      ),
+                    );
+                  }
 
-                    return const Center(child: CircularProgressIndicator());
-                  },
-                ),
+                  return const Center(child: CircularProgressIndicator());
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CreateTaskPage(currentUserId: widget.userId),
-              ),
-            ).then((_) {
-              // Refresh tasks when returning from create task page
-              context.read<TaskCubit>().loadTasks(widget.userId);
-            });
-          },
-          child: const Icon(Icons.add),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateTaskPage(currentUserId: widget.userId),
+            ),
+          ).then((_) {
+            // Refresh tasks when returning from create task page
+            context.read<TaskCubit>().loadTasks(widget.userId);
+          });
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -37,7 +37,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   Future<void> _handleContinue() async {
     final name = _nameController.text.trim();
-    
+
     if (name.isEmpty) {
       _showErrorSnackBar('Please enter your name');
       return;
@@ -62,25 +62,24 @@ class _OnboardingPageState extends State<OnboardingPage> {
       }
 
       final userData = await _supabaseService.saveUser(name, photoUrl);
-      
+
       if (userData != null) {
         _showSuccessSnackBar('Welcome, $name!');
-        
+
         print('User created:');
         print('ID: ${userData['id']}');
         print('Name: ${userData['name']}');
         print('Photo: ${userData['photo_url']}');
-        
-        // Navigate to availability page after a short delay
+
+        // Navigate to availability page with REAL user ID
         Future.delayed(const Duration(milliseconds: 1500), () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => AvailabilityPage(userId: userData['id']),
+              builder: (context) => AvailabilityPage(userId: userData['id'] as String),
             ),
           );
         });
-        
       } else {
         _showErrorSnackBar('Failed to create user');
       }
@@ -95,19 +94,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
 
@@ -124,10 +117,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
               style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 30),
-            AuthField(
-              hintText: 'name',
-              controller: _nameController,
-            ),
+            AuthField(hintText: 'name', controller: _nameController),
             const SizedBox(height: 30),
             ProfilePhotoUpload(onPhotoSelected: _onPhotoSelected),
             const SizedBox(height: 30),
@@ -135,7 +125,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
               onPressed: _handleContinue,
               text: 'Continue',
               isLoading: _isLoading,
-            ),            
+            ),
+            // Test button removed completely - only the main Continue button remains
           ],
         ),
       ),

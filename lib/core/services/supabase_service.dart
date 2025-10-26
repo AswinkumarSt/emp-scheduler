@@ -22,6 +22,8 @@ class SupabaseService {
     );
   }
 
+ 
+
   Future<String?> uploadProfileImage(XFile imageFile) async {
     try {
       final String fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
